@@ -7,19 +7,10 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Swagger\Annotations as SWG;
 
-
 /**
- * Class User
- *
- * @package Petstore30
- *
- * @author  Donii Sergii <doniysa@gmail.com>
- *
- * @OA\Schema(
- *     title="User model",
- *     description="User model",
- * )
+ * @OA\Schema()
  */
+
 class User extends Authenticatable
 {
     use Notifiable;
@@ -32,17 +23,42 @@ class User extends Authenticatable
     protected $fillable = [
         'firstname','lastname','mobile', 'email', 'password'
     ];
-
-
-   /**
-     * @OA\Property(
-     *     description="firstname",
-     *     title="firstname",
-     * )
-     *
-     * @var string
+    
+    /**
+     * The User id
+     * @var integer
+     * @OA\Property()
      */
+ 
+    public $id;
+    /**
+     * The User firstname
+     * @var string
+     * @OA\Property()
+     */
+ 
     public $firstname;
+    /**
+     * The User lastname
+     * @var string
+     * @OA\Property()
+     */
+ 
+    public $lastname;
+    /**
+     * The User mobile
+     * @var string
+     * @OA\Property()
+     */
+ 
+    public $mobile;
+    /**
+     * The User email
+     * @var string
+     * @OA\Property()
+     */
+ 
+    public $email;
 
     /**
      * The attributes that should be hidden for arrays.

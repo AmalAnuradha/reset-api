@@ -22,7 +22,7 @@ Auth::routes();
 Route::get('/home', 'HomeController@index')->name('home');
 
 
-Route::get('/users','UserController@showUsers')->name('all users');
+Route::get('/users','UserController@showUsers')->middleware('jwt.auth')->name('all users');
 
 
 
@@ -34,7 +34,7 @@ Route::get('/users/{id}','UserController@showUser')->name('get user');
 Route::post('/users','UserController@addUser')->name('insert user');
 
 
-Route::put('/users','UserController@updateUser')->name('update user');
+Route::put('/users/{id}','UserController@updateUser')->name('update user');
 
 
 
