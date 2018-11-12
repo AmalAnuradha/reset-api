@@ -26,6 +26,10 @@ use Swagger\Annotations as SWG;
 
 class UserController extends Controller
 {
+
+    public function getPrefix(Request $request){
+        dd($request->route()->getPrefix());
+    }
     //
     /**
      * @OA\Get(

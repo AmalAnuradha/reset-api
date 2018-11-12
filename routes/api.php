@@ -13,11 +13,21 @@ use Illuminate\Http\Request;
 |
 */
 
-Route::middleware('auth:api')->get('/user', function (Request $request) {
-    return $request->user();
-});
+
 Route::group(['middleware' => ['cors']],function(){
     Route::post('/user/register','UserController@register');
 
     Route::post('/user/login','UserController@login');
+
+    Route::get('/prefix','UserController@getPrefix');
+
+    Route::get('/users','UserController@showUsers')->middleware('jwt.auth')->name('all users');
+
+    Route::get('/users/{id}','UserController@showUser')->name('get user');
+
+    Route::post('/users','UserController@addUser')->name('insert user');
+
+    Route::put('/users/{id}','UserController@updateUser')->name('update user');
+
+    Route::delete('/users/{id}','UserController@delete')->name('delete user');
 });
