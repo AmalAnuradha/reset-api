@@ -12,6 +12,13 @@ use Illuminate\Http\Request;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
+// Route::middleware('jwt.auth')->get('users', function(Request $request) {
+//     return auth()->user();
+// });
+// Route::group(['middleware' => ['jwt.verify']], function() {
+//     Route::get('user', 'UserController@getAuthenticatedUser');
+//     Route::get('closed', 'DataController@closed');
+// });
 
 
 Route::group(['middleware' => ['cors']],function(){
@@ -19,15 +26,30 @@ Route::group(['middleware' => ['cors']],function(){
 
     Route::post('/user/login','UserController@login');
 
-    Route::get('/prefix','UserController@getPrefix');
-
-    Route::get('/users','UserController@showUsers')->middleware('jwt.auth')->name('all users');
+    Route::get('/prefix','UserController@getPrefix');  
 
     Route::get('/users/{id}','UserController@showUser')->name('get user');
 
     Route::post('/users','UserController@addUser')->name('insert user');
 
-    Route::put('/users/{id}','UserController@updateUser')->name('update user');
+    Route::get('/users/get/all','UserController@showUsers')->name('all');
 
-    Route::delete('/users/{id}','UserController@delete')->name('delete user');
+    
+
+
+    Route::group(['middleware' => ['jwt.verify']], function() {
+
+        Route::post('user/logout', 'UserController@logout');
+
+        Route::get('user', 'UserController@getAuthenticatedUser');
+
+        Route::get('closed', 'DataController@closed');
+
+        Route::put('/users/{id}','UserController@updateUser')->name('update user');
+
+        Route::delete('/users/{id}','UserController@delete')->name('delete user');
+
+        Route::get('/users','UserController@showUsers')->name('all users');
+        
+    });
 });

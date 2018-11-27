@@ -12,6 +12,8 @@ use JWTFactory;
 use JWTAuth;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Hash;
 
 use Swagger\Annotations as SWG;
 
@@ -27,19 +29,29 @@ use Swagger\Annotations as SWG;
 class UserController extends Controller
 {
 
-    public function getPrefix(Request $request){
-        dd($request->route()->getPrefix());
-    }
     //
     /**
      * @OA\Get(
-     *     path="/users/{id}",
-     *     @OA\Response(response="200", description="get a user")
+     *     path="/api/v1/users/{id}",
+     *     @OA\Response(response="200", description="get a user"),
+     *      tags={"User"},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID of user to return",
+     *         required=true,
+     *         @OA\Schema(
+     *             type="integer",
+     *             format="int64"
+     *         )
+     *     ),
      * )
      */
 
     public function showUser($id){
+        
         $user = User::find($id);
+        
         if ($user) {
             return Response::json([
                 'data' => $user 
@@ -54,15 +66,41 @@ class UserController extends Controller
         
         
     }
-
+    /**
+     * @OA\Get(
+     *     path="/api/v1/users",
+     *     @OA\Response(response="200", description="get all users"),
+     *     tags={"User"},
+     * )
+     */
     public function showUsers() {
         
-        return Response::json([
-            'data' => User::paginate(5) 
-        ], 200);
+        return Response::json(
+            User::all()
+        , 200);
         
     }
-
+    /**
+     * @OA\Post(
+     *     path="/api/v1/users",
+     *     @OA\Response(response="200", description="add a user"),
+     *     tags={"User"},
+     *      @OA\Parameter(
+     *         name="request",
+     *         in="query",
+     *         description="data of user to add",
+     *         required=true,
+     *         @OA\Schema(
+     *             type="array",
+     *             default="available",
+     *             @OA\Items(
+     *                 type="string",
+     *                 
+     *             )
+     *         )
+     *     ),
+     * )
+     */
     public function addUser(Request $request) {
         
         $validator = Validator::make($request->all(), [
@@ -74,9 +112,11 @@ class UserController extends Controller
             return response()->json($validator->errors(),422);
         }
         $newuser = new User($request->all());
+        $newuser->password = Hash::make($request->get('password'));
         $newuser->save();
+        Redis::publish('channel-list-user', json_encode($newuser));
         return Response::json([
-            'message' => "success" 
+            'data' => $newuser 
         ], 201);   
     }
 
@@ -88,55 +128,100 @@ class UserController extends Controller
             'password' => 'required|string|min:6|confirmed',
         ]);
     }
-
-public function updateUser($id,Request $request)
-{
-    // validate
-    // read more on validation at http://laravel.com/docs/validation
-    
-        // store
-        $user = User::find($id);
-        // return $request;
-        // return $user->password;
-        if ( $user ) {
-            foreach ( $request->toArray() as $key => $value ) {
-                foreach( $user->toArray() as $key_user => $value_user )
-                {
-                    if( $key == $key_user ){                       
-                        $user->$key_user = $request->$key_user;
-                    }
-                    
-                }
+    /**
+     * @OA\Put(
+     *     path="/api/v1/users/{id}",
+     *     @OA\Response(response="200", description="update a user"),
+     *     tags={"User"},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID of user to update",
+     *         required=true,
+     *         @OA\Schema(
+     *             type="integer",
+     *             format="int64"
+     *         )
+     *     ), 
+     *      @OA\Parameter(
+     *         name="request",
+     *         in="query",
+     *         description="data of user to update",
+     *         required=true,
+     *         @OA\Schema(
+     *             type="array",
+     *             default="available",
+     *             @OA\Items(
+     *                 type="string",
+     *                 
+     *             )
+     *         )
+     *     ),
+     * )
+     */
+    public function updateUser($id,Request $request)
+    {
+        // validate
+        // read more on validation at http://laravel.com/docs/validation
+        
+            // store
+            $user = User::find($id);
+            // return count( $request->toArray() );
+            // return $user->password;
+            if ( count( $request->toArray() ) == 0 ) {
+                return Response::json([
+                    'data' => "nothing to update" 
+                ])->setStatusCode( 400 );    
             }
             
-            // return $request;
-            $user->save();
-            return Response::json([
-                'message' => "successfully saved" 
-            ])->setStatusCode( 200 );;
+            if ( $user ) {
+                foreach ( $request->toArray() as $key => $value ) {
+                    
+                    $user[$key] = $value;
+                }
+                
+                // return $request;
+                $user->update($user->toArray());
+                
+                Redis::publish('channel-list-user', json_encode($user));
+                return Response::json([
+                    'data' => $user 
+                ])->setStatusCode( 200 );;
 
-        } else {
-            return Response::json([
-                'message' => "no user found" 
-            ])->setStatusCode( 404 );;
-        }
-        
-        
-
-        // redirect
-     
-    
-}
-
-    public function delete($id){
-
-        
+            }
+            else {
+                return Response::json([
+                    'data' => "no user found" 
+                ])->setStatusCode( 404 );
+            }
+         
+    }
+    /**
+     * @OA\Delete(
+     *     path="/api/v1/users/{id}",
+     *     @OA\Response(response="200", description="delete a user"),
+     *     tags={"User"},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID of user to delete",
+     *         required=true,
+     *         @OA\Schema(
+     *             type="integer",
+     *             format="int64"
+     *         )
+     *     ),
+     * )
+     */
+    public function delete($id){      
 
         $user = User::find($id);
 
         if ($user) {
             $user->delete();
+            Redis::publish('channel-list-user', json_encode($user));
             return response()->json(['success' => 'successfully deleted'], 200);
+            
         } else {
             return Response::json([
                 'message' => "no user found" 
@@ -146,23 +231,21 @@ public function updateUser($id,Request $request)
 
     public function login(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|string|email|max:255',
-            'password'=> 'required'
-        ]);
-        if ($validator->fails()) {
-            return response()->json($validator->errors());
-        }
+            
+
+        
         $credentials = $request->only('email', 'password');
-        $user = User::where('email',$request->email)->first();
+
         try {
             if (! $token = JWTAuth::attempt($credentials)) {
-                return response()->json(['error' => 'invalid_credentials'], 401);
+                return response()->json(['error' => 'invalid_credentials'], 400);
             }
         } catch (JWTException $e) {
             return response()->json(['error' => 'could_not_create_token'], 500);
         }
-        $user = $user;
+
+        $user = User::where('email','=',$request->get('email'))->first();
+        
         
         $token = compact('token')['token'];
         $user->token = $token;
@@ -173,23 +256,63 @@ public function updateUser($id,Request $request)
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            'firstname' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
-            'firstname' => 'required',
-            'password'=> 'required'
+            'password' => 'required|string|min:6|confirmed',
         ]);
-        if ($validator->fails()) {
-            return response()->json($validator->errors());
+
+        if($validator->fails()){
+                return response()->json($validator->errors()->toJson(), 400);
         }
-        User::create([
-            'firstname' => $request->get('firstname'),
+
+        $user = User::create([
+            'firstname' => $request->get('name'),
             'email' => $request->get('email'),
-            'password' => bcrypt($request->get('password')),
+            'password' => Hash::make($request->get('password')),
         ]);
-        $user = User::first();
+
         $token = JWTAuth::fromUser($user);
-        
-        return Response::json(compact('token'));
+
+        return response()->json(compact('user','token'),201);
     }
+
+    public function getAuthenticatedUser()
+            {
+                    try {
+
+                            if (! $user = JWTAuth::parseToken()->authenticate()) {
+                                    return response()->json(['user_not_found'], 404);
+                            }
+
+                    } catch (Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
+
+                            return response()->json(['token_expired'], $e->getStatusCode());
+
+                    } catch (Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
+
+                            return response()->json(['token_invalid'], $e->getStatusCode());
+
+                    } catch (Tymon\JWTAuth\Exceptions\JWTException $e) {
+
+                            return response()->json(['token_absent'], $e->getStatusCode());
+
+                    }
+
+                    return response()->json(compact('user'));
+            }
+    
+    public function logout(Request $request) {
+        $this->validate($request, ['token' => 'required']);
+        
+        try {
+            JWTAuth::invalidate($request->input('token'));
+            return response()->json(['success' => true, 'message'=> "You have successfully logged out."]);
+        } catch (JWTException $e) {
+            // something went wrong whilst attempting to encode the token
+            return response()->json(['success' => false, 'error' => 'Failed to logout, please try again.'], 500);
+        }
+    }        
+    
 }
 
 

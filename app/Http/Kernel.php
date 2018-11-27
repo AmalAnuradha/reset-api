@@ -35,11 +35,15 @@ class Kernel extends HttpKernel
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            
+            
         ],
 
         'api' => [
             'throttle:60,1',
             'bindings',
+        
+            
         ],
     ];
 
@@ -63,5 +67,7 @@ class Kernel extends HttpKernel
         'jwt.auth' => 'Tymon\JWTAuth\Middleware\GetUserFromToken',
         'jwt.refresh' => 'Tymon\JWTAuth\Middleware\RefreshToken',
         'cors' => \App\Http\Middleware\Cors::class,
+        'jwt.verify' => \App\Http\Middleware\JwtMiddleware::class,
+        
     ];
 }
